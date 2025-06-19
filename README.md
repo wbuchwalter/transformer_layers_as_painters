@@ -4,10 +4,12 @@
 </p>
 
 ## Requirements
-1. Please run following commands to set up basic python environment
+1. Please run the following commands to set up the basic python environment. The
+   repository can be cloned via HTTPS and does not require the separate private
+   repository mentioned in early versions of this README.
 ```
-git clone git@github.com:floatingbigcat/transformer-as-painter.git
-cd transformer-as-painter
+git clone https://github.com/floatingbigcat/transformer_layers_as_painters.git
+cd transformer_layers_as_painters
 
 # We use python 3.10
 
@@ -35,18 +37,22 @@ pip install -e .
 ```
 
 ## Example Usage
-Basically, you can run all our methods by simiply change the argument in the `example.sh` under gpt/ or bert/
+Basically, you can run all our methods by simply editing the arguments in the
+`example.sh` scripts under `gpt/` or `bert/`. If you do not have a GPU
+available, set `CUDA_VISIBLE_DEVICES=""` and pass `--device cpu` to `lm_eval`
+as shown below.
 
 ### GPT 
 ```
 cd gpt
-bash example.sh
+export CUDA_VISIBLE_DEVICES=
+bash example.sh --device cpu
 ```
 
-### Bert 
+### Bert
 ```
 cd bert
-bash example.sh
+bash example.sh --device cpu
 ```
 
 ## Cosine Similiary Plot
