@@ -1,5 +1,5 @@
 import types
-from lm_eval.routing_llama import LlamaSdpaAttention, LlamaDecoderLayer, LlamaModel
+from lm_eval.routing_llama import LlamaAttention, LlamaDecoderLayer, LlamaModel
 
 
 def modify_llama(lm, args=None):
@@ -22,7 +22,7 @@ def modify_llama(lm, args=None):
 
     for i in range(len(lm.model.model.layers)):
         lm.model.model.layers[i].self_attn.forward = types.MethodType(
-            LlamaSdpaAttention.forward, lm.model.model.layers[i].self_attn
+            LlamaAttention.forward, lm.model.model.layers[i].self_attn
         )
 
     return lm
