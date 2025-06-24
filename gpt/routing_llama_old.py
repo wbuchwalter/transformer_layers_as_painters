@@ -17,7 +17,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" PyTorch LLaMA model."""
+"""PyTorch LLaMA model."""
 import math
 import warnings
 from typing import List, Optional, Tuple, Union
@@ -192,20 +192,31 @@ class LlamaAttention(nn.Module):
         bsz, q_len, _ = hidden_states.size()
 
         if self.config.pretraining_tp > 1:
-            key_value_slicing = (self.num_key_value_heads * self.head_dim) // self.config.pretraining_tp
+            key_value_slicing = (
+                self.num_key_value_heads * self.head_dim
+            ) // self.config.pretraining_tp
             query_slices = self.q_proj.weight.split(
                 (self.num_heads * self.head_dim) // self.config.pretraining_tp, dim=0
             )
             key_slices = self.k_proj.weight.split(key_value_slicing, dim=0)
             value_slices = self.v_proj.weight.split(key_value_slicing, dim=0)
 
-            query_states = [F.linear(hidden_states, query_slices[i]) for i in range(self.config.pretraining_tp)]
+            query_states = [
+                F.linear(hidden_states, query_slices[i])
+                for i in range(self.config.pretraining_tp)
+            ]
             query_states = torch.cat(query_states, dim=-1)
 
-            key_states = [F.linear(hidden_states, key_slices[i]) for i in range(self.config.pretraining_tp)]
+            key_states = [
+                F.linear(hidden_states, key_slices[i])
+                for i in range(self.config.pretraining_tp)
+            ]
             key_states = torch.cat(key_states, dim=-1)
 
-            value_states = [F.linear(hidden_states, value_slices[i]) for i in range(self.config.pretraining_tp)]
+            value_states = [
+                F.linear(hidden_states, value_slices[i])
+                for i in range(self.config.pretraining_tp)
+            ]
             value_states = torch.cat(value_states, dim=-1)
 
         else:
@@ -213,30 +224,46 @@ class LlamaAttention(nn.Module):
             key_states = self.k_proj(hidden_states)
             value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        query_states = query_states.view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        key_states = key_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
+        value_states = value_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
 
         cos, sin = self.rotary_emb(value_states, position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+        query_states, key_states = apply_rotary_pos_emb(
+            query_states, key_states, cos, sin
+        )
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+            key_states, value_states = past_key_value.update(
+                key_states, value_states, self.layer_idx, cache_kwargs
+            )
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
 
-        attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+        attn_weights = torch.matmul(
+            query_states, key_states.transpose(2, 3)
+        ) / math.sqrt(self.head_dim)
 
         if attention_mask is not None:  # no matter the length, we just slice it
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
 
         # upcast attention to fp32
-        attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
-        attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
+        attn_weights = nn.functional.softmax(
+            attn_weights, dim=-1, dtype=torch.float32
+        ).to(query_states.dtype)
+        attn_weights = nn.functional.dropout(
+            attn_weights, p=self.attention_dropout, training=self.training
+        )
         attn_output = torch.matmul(attn_weights, value_states)
 
         if attn_output.size() != (bsz, self.num_heads, q_len, self.head_dim):
@@ -250,9 +277,18 @@ class LlamaAttention(nn.Module):
         attn_output = attn_output.reshape(bsz, q_len, -1)
 
         if self.config.pretraining_tp > 1:
-            attn_output = attn_output.split(self.hidden_size // self.config.pretraining_tp, dim=2)
-            o_proj_slices = self.o_proj.weight.split(self.hidden_size // self.config.pretraining_tp, dim=1)
-            attn_output = sum([F.linear(attn_output[i], o_proj_slices[i]) for i in range(self.config.pretraining_tp)])
+            attn_output = attn_output.split(
+                self.hidden_size // self.config.pretraining_tp, dim=2
+            )
+            o_proj_slices = self.o_proj.weight.split(
+                self.hidden_size // self.config.pretraining_tp, dim=1
+            )
+            attn_output = sum(
+                [
+                    F.linear(attn_output[i], o_proj_slices[i])
+                    for i in range(self.config.pretraining_tp)
+                ]
+            )
         else:
             attn_output = self.o_proj(attn_output)
 
@@ -312,7 +348,7 @@ class LlamaSdpaAttention(LlamaAttention):
                 use_cache=use_cache,
                 cache_position=cache_position,
             )
-        
+
         layer_idx = layer_idx if layer_idx >= 0 else self.layer_idx
 
         bsz, q_len, _ = hidden_states.size()
@@ -321,17 +357,27 @@ class LlamaSdpaAttention(LlamaAttention):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
-        key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
+        query_states = query_states.view(
+            bsz, q_len, self.num_heads, self.head_dim
+        ).transpose(1, 2)
+        key_states = key_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
+        value_states = value_states.view(
+            bsz, q_len, self.num_key_value_heads, self.head_dim
+        ).transpose(1, 2)
 
         cos, sin = self.rotary_emb(value_states, position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+        query_states, key_states = apply_rotary_pos_emb(
+            query_states, key_states, cos, sin
+        )
 
         if past_key_value is not None:
             # sin and cos are specific to RoPE models; cache_position needed for the static cache
             cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-            key_states, value_states = past_key_value.update(key_states, value_states, layer_idx, cache_kwargs)
+            key_states, value_states = past_key_value.update(
+                key_states, value_states, layer_idx, cache_kwargs
+            )
 
         key_states = repeat_kv(key_states, self.num_key_value_groups)
         value_states = repeat_kv(value_states, self.num_key_value_groups)
@@ -366,7 +412,6 @@ class LlamaSdpaAttention(LlamaAttention):
         attn_output = self.o_proj(attn_output)
 
         return attn_output, None, past_key_value
-
 
 
 LLAMA_ATTENTION_CLASSES = {
@@ -436,8 +481,6 @@ class LlamaDecoderLayer(nn.Module):
             **kwargs,
         )
         hidden_states = residual.to(hidden_states.device) + hidden_states
-
-            
 
         # Fully Connected
         residual = hidden_states
@@ -821,12 +864,12 @@ class LlamaModel(LlamaPreTrainedModel):
                             )
                             k_cache = torch.stack(k_caches_pool, dim=0).mean(dim=0)
                             v_cache = torch.stack(v_caches_pool, dim=0).mean(dim=0)
-                            next_decoder_cache.key_cache[
-                                layer_cnt
-                            ] = next_decoder_cache.key_cache[layer_cnt][:, :, :-1, :]
-                            next_decoder_cache.value_cache[
-                                layer_cnt
-                            ] = next_decoder_cache.value_cache[layer_cnt][:, :, :-1, :]
+                            next_decoder_cache.key_cache[layer_cnt] = (
+                                next_decoder_cache.key_cache[layer_cnt][:, :, :-1, :]
+                            )
+                            next_decoder_cache.value_cache[layer_cnt] = (
+                                next_decoder_cache.value_cache[layer_cnt][:, :, :-1, :]
+                            )
                             next_decoder_cache.key_cache[layer_cnt] = torch.concat(
                                 (
                                     next_decoder_cache.key_cache[layer_cnt],
@@ -861,21 +904,21 @@ class LlamaModel(LlamaPreTrainedModel):
                             v_caches_pool.append(
                                 next_decoder_cache.value_cache[layer_cnt][:, :, -1, :]
                             )
-                            next_decoder_cache.key_cache[
-                                layer_cnt
-                            ] = next_decoder_cache.key_cache[layer_cnt][:, :, :-1, :]
-                            next_decoder_cache.value_cache[
-                                layer_cnt
-                            ] = next_decoder_cache.value_cache[layer_cnt][:, :, :-1, :]
+                            next_decoder_cache.key_cache[layer_cnt] = (
+                                next_decoder_cache.key_cache[layer_cnt][:, :, :-1, :]
+                            )
+                            next_decoder_cache.value_cache[layer_cnt] = (
+                                next_decoder_cache.value_cache[layer_cnt][:, :, :-1, :]
+                            )
         elif method == "baseline":
 
-            if self.hidden_state_folder_path is not None: 
+            if self.hidden_state_folder_path is not None:
                 save_pool = []
 
             for layer_idx in range(num_layers):
 
-                # Save Hidden States 
-                if self.hidden_state_folder_path is not None: 
+                # Save Hidden States
+                if self.hidden_state_folder_path is not None:
                     save_pool.append(hidden_states)
 
                 layer_outputs = self._pass_through_layer(
@@ -892,14 +935,16 @@ class LlamaModel(LlamaPreTrainedModel):
                 hidden_states = layer_outputs[0]
                 if use_cache:
                     next_decoder_cache = layer_outputs[2 if output_attentions else 1]
-            
+
             # Save Hidden States
-            if self.hidden_state_folder_path is not None: 
-                save_pool.append(hidden_states) # save the last hidden states
+            if self.hidden_state_folder_path is not None:
+                save_pool.append(hidden_states)  # save the last hidden states
                 import os, time
+
                 os.makedirs(self.hidden_state_folder_path, exist_ok=True)
-                hidden_states_path = os.path.join(self.hidden_state_folder_path, 
-                                                  f"{str(time.time())[-5:]}.pt")
+                hidden_states_path = os.path.join(
+                    self.hidden_state_folder_path, f"{str(time.time())[-5:]}.pt"
+                )
                 torch.save(save_pool, hidden_states_path)
 
         elif method == "skip_idx_layer":  # skip the layer at start_layer only
