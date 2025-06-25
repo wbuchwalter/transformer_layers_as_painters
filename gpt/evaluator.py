@@ -260,6 +260,18 @@ def simple_evaluate(
         raise ValueError("Only llama, mistral and neox models are supported")
 
     # ==============
+    # === Painter ===
+    if "Llama" in model_args or "llama" in model_args:
+        from lm_eval.modify_model import modify_llama
+
+        lm = modify_llama(lm, args)
+    elif "Gemma" in model_args or "gemma" in model_args:
+        from lm_eval.modify_model import modify_gemma
+
+        lm = modify_gemma(lm, args)
+    else:
+        raise ValueError("Only llama, mistral and neox models are supported")
+    # ==============
 
     results = evaluate(
         lm=lm,
