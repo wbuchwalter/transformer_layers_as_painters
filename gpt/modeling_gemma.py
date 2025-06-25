@@ -170,8 +170,8 @@ class Gemma3DecoderLayer(nn.Module):
         residual = hidden_states
         hidden_states = self.pre_feedforward_layernorm(hidden_states)
         for i in range(self.repeat_mlp):
-            if i > 0:
-                print(".")
+            # if i > 0:
+            #     print(".")
             hidden_states = self.mlp(hidden_states)
         hidden_states = self.post_feedforward_layernorm(hidden_states)
         hidden_states = residual + hidden_states
