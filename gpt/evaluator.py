@@ -45,6 +45,7 @@ eval_logger = logging.getLogger(__name__)
 
 @positional_deprecated
 def simple_evaluate(
+    args,
     model,
     model_args: Optional[Union[str, dict]] = None,
     tasks: Optional[List[Union[str, dict, object]]] = None,

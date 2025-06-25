@@ -468,6 +468,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
     )
 
     results = evaluator.simple_evaluate(
+        args=args,
         model=args.model,
         model_args=args.model_args,
         tasks=task_names,
