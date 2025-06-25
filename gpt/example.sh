@@ -2,7 +2,7 @@
 export CUDA_VISIBLE_DEVICES=0
 
 start_layer=7 # start layer index, 14 for Llama-2-7b
-model=meta-llama/Llama-3.2-1B #meta-llama/Llama-2-7b-hf #mistralai/Mistral-7B-v0.1
+model=google/gemma-3-4b-it #meta-llama/Llama-2-7b-hf #mistralai/Mistral-7B-v0.1
 method='baseline' # middle_repeat, skip, reverse, baseline, random, loop_parallel
 repeat_time_or_seed=3 # repeat time if method is loop_parallel, seed if method is random
 tasks='arc_challenge' # arc_challenge,hellaswag,winogrande,gsm8k

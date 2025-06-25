@@ -5,17 +5,20 @@ from lm_eval.modeling_gemma import CuGemma3ForCausalLM, Gemma3DecoderLayer
 
 def modify_gemma(lm, args=None):
     print(f"modifying: {lm.model.model.__class__.__name__}")
-    lm.model.model.forward = types.MethodType(
-        CuGemma3ForCausalLM.forward, lm.model.model
-    )
-    for i in range(len(lm.model.model.layers)):
-        lm.model.model.layers[i].forward = types.MethodType(
-            Gemma3DecoderLayer.forward, lm.model.model.layers[i]
+    # breakpoint()
+    # lm.model.model.forward = types.MethodType(
+    #     CuGemma3ForCausalLM.forward, lm.model.model
+    # )
+    for i in range(len(lm.model.model.language_model.layers)):
+        lm.model.model.language_model.layers[i].forward = types.MethodType(
+            Gemma3DecoderLayer.forward, lm.model.model.language_model.layers[i]
         )
-        lm.model.model.layers[i].repeat_mlp = 1
+        lm.model.model.language_model.layers[i].repeat_mlp = 1
 
     if args.method == "smart":
-        lm.model.model.layers[8].repeat_mlp = 2
+        lm.model.model.language_model.layers[8].repeat_mlp = 2
+
+    return lm
 
 
 def modify_llama(lm, args=None):

@@ -252,7 +252,7 @@ def simple_evaluate(
         from lm_eval.modify_model import modify_llama
 
         lm = modify_llama(lm, args)
-    elif "Gemma" in model_args:
+    elif "Gemma" in model_args or "gemma" in model_args:
         from lm_eval.modify_model import modify_gemma
 
         lm = modify_gemma(lm, args)
