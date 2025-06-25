@@ -9,14 +9,23 @@ def modify_gemma(lm, args=None):
     # lm.model.model.forward = types.MethodType(
     #     CuGemma3ForCausalLM.forward, lm.model.model
     # )
-    for i in range(len(lm.model.model.language_model.layers)):
-        lm.model.model.language_model.layers[i].forward = types.MethodType(
-            Gemma3DecoderLayer.forward, lm.model.model.language_model.layers[i]
-        )
-        lm.model.model.language_model.layers[i].repeat_mlp = 1
+    #'Gemma3TextModel' object has no attribute 'language_model'
+    # AttributeError: 'Gemma3Model' object has no attribute 'layers'
+
+    layers = None
+    if lm.model.model.__class__.__name__ == "Gemma3Model":
+        layers = lm.model.model.language_model.layers
+    elif lm.model.model.__class__.__name__ == "Gemma3TextModel":
+        layers = lm.model.model.layers
+
+    for i in range(len(layers)):
+        layers[i].forward = types.MethodType(Gemma3DecoderLayer.forward, layers[i])
+        layers[i].repeat_mlp = 1
 
     if args.method == "smart":
-        lm.model.model.language_model.layers[8].repeat_mlp = 2
+        layers[8].repeat_mlp = 5
+        layers[9].repeat_mlp = 5
+        layers[10].repeat_mlp = 5
 
     return lm
 
