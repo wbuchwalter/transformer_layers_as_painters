@@ -248,15 +248,14 @@ def simple_evaluate(
         run_task_tests(task_list=tasks)
 
     # === Painter ===
-    if "Llama" in model_args or 'llama' in model_args:
+    if "Llama" in model_args or "llama" in model_args:
         from lm_eval.modify_model import modify_llama
+
         lm = modify_llama(lm, args)
-    elif "Mistral" in model_args:
-        from lm_eval.modify_model import modify_mistral
-        lm = modify_mistral(lm, args)
-    elif "neox" in model_args or "pythia" in model_args:
-        from lm_eval.modify_model import modify_neox
-        lm = modify_neox(lm, args)
+    elif "Gemma" in model_args:
+        from lm_eval.modify_model import modify_gemma
+
+        lm = modify_gemma(lm, args)
     else:
         raise ValueError("Only llama, mistral and neox models are supported")
 
@@ -533,16 +532,16 @@ def evaluate(
                     ]
 
                     # compute group's pooled metric and stderr
-                    results[group][
-                        metric
-                    ] = lm_eval.api.metrics.aggregate_subtask_metrics(metrics, sizes)
+                    results[group][metric] = (
+                        lm_eval.api.metrics.aggregate_subtask_metrics(metrics, sizes)
+                    )
                     # TODO: calculate grouped metric using aggregation fn
                     if "N/A" in stderrs:
                         results[group][stderr] = "N/A"
                     else:
-                        results[group][
-                            stderr
-                        ] = lm_eval.api.metrics.pooled_sample_stderr(stderrs, sizes)
+                        results[group][stderr] = (
+                            lm_eval.api.metrics.pooled_sample_stderr(stderrs, sizes)
+                        )
                         # TODO: allow GroupConfigs to choose which variance formula is used, for back-compatibility
                         # To use the old (likely incorrect) variance formula, comment out the above and uncomment this line:
                         # results[group][stderr] = lm_eval.api.metrics.combined_sample_stderr(stderrs, sizes, metrics=metrics)
